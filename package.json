@@ -1,0 +1,12 @@
+{
+  "name": "doc2ebook",
+  "version": "0.0.1",
+  "main": "index.js",
+  "license": "MIT",
+  "dependencies": {
+    "@mozilla/readability": "^0.4.0",
+    "jsdom": "^16.4.0",
+    "sync-request": "^6.1.0",
+    "website-scraper": "^4.2.3"
+  }
+}
