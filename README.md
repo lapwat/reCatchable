@@ -2,6 +2,14 @@
 
 Turn a website into a book.
 
+## Install
+
+```sh
+git clone https://gitlab.com/lapwat/website2ebook.git
+cd website2ebook
+yarn
+```
+
 ## Usage
 
 Run this command.
