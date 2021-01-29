@@ -55,12 +55,12 @@ let urls = []
 for (const item of tableOfContent) {
   urls.push({
     url: options.baseUrl + item.href,
-    filename: path.basename(item.href),
+    filename: path.basename(item.href) || 'index',
   });
 }
 
-if (options.verbose)
-  console.log(`Links in table of content: ${urls.length}`);
+console.log(`Found ${urls.length} pages in the table of content`);
+console.log(`Downloading...`);
 
 (async () => {
   await scrape({
@@ -68,6 +68,8 @@ if (options.verbose)
     urlFilter: url => url.startsWith(options.baseUrl),
     directory: options.outDir,
   });
+
+  console.log(`Creating book: ${title}`);
 
   fs.appendFileSync(absoluteOutFile, `<title>${title}</title>`);
  
@@ -77,8 +79,12 @@ if (options.verbose)
     const dom = new JSDOM(body);
     const reader = new Readability(dom.window.document);
     const article = reader.parse();
+    
+    console.log(`New chapter: ${article.title}...`);
 
-    fs.appendFileSync(path.join(options.outDir, 'final.html'), `<h1 class="chapter">${article.title}</h1>${article.content}`);
-  }  
+    fs.appendFileSync(absoluteOutFile, `<h1 class="chapter">${article.title}</h1>${article.content}`);
+  }
+
+  console.log(`Website generated to ${absoluteOutFile}.`); 
 
 })();
