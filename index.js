@@ -1,14 +1,28 @@
 #!/usr/bin/env node
 
 // imports
+const os = require('os');
 const fs = require('fs');
 const path = require('path');
 const JSDOM = require('jsdom').JSDOM;
 const { Readability } = require('@mozilla/readability');
 const request = require('sync-request');
 const scrape = require('website-scraper');
-const yargs = require('yargs/yargs')
-const { hideBin } = require('yargs/helpers')
+const Epub = require('epub-gen');
+const yargs = require('yargs/yargs');
+const { hideBin } = require('yargs/helpers');
+
+const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'cachable-')) + '/out';
+
+class ScraperPlugin {
+  apply(registerAction) {
+    registerAction('getReference', ({resource, parentResource, originalReference, utils}) => {
+      if (!resource)
+        return {reference: parentResource.url + originalReference}
+      return {reference: resource.url};
+    });
+  }
+}
 
 // parse args
 const options = yargs(hideBin(process.argv))
@@ -33,11 +47,10 @@ const options = yargs(hideBin(process.argv))
     default: '/',
     description: 'Path  of the website where the table of content is located, with leading slash',
   })
-  .option('out-dir', {
+  .option('out', {
     alias: 'o',
     type: 'string',
-    default: 'out',
-    description: 'Folder where final.html will be downloaded',
+    description: 'Name of the epub file',
   })
   .strict()
   .wrap(130)
@@ -48,7 +61,7 @@ const body = request('GET', options.baseUrl + options.home).getBody();
 const dom = new JSDOM(body);
 const title = dom.window.document.querySelector('title').textContent;
 const tableOfContent = dom.window.document.querySelectorAll(options.selector);
-const absoluteOutFile = path.join(options.outDir, 'final.html')
+options.out = options.out || `${title}.epub`
 
 // prepare urls
 let urls = []
@@ -66,25 +79,34 @@ console.log(`Downloading...`);
   await scrape({
     urls,
     urlFilter: url => url.startsWith(options.baseUrl),
-    directory: options.outDir,
+    directory: tmpDir,
+    sources: [{ selector:'img', attr:'src' }],
+    plugins: [ new ScraperPlugin() ],
   });
 
-  console.log(`Creating book: ${title}`);
+  console.log(`Book: ${title}`);
 
-  fs.appendFileSync(absoluteOutFile, `<title>${title}</title>`);
- 
+  const chapters = [];
   for (const url of urls) {
-    const absoluteFilename = path.join(options.outDir, `${url.filename}.html`);
+    const absoluteFilename = path.join(tmpDir, `${url.filename}.html`);
     const body = fs.readFileSync(absoluteFilename);
     const dom = new JSDOM(body);
     const reader = new Readability(dom.window.document);
     const article = reader.parse();
-    
-    console.log(`New chapter: ${article.title}...`);
 
-    fs.appendFileSync(absoluteOutFile, `<h1 class="chapter">${article.title}</h1>${article.content}`);
+    console.log(`Chapter: ${article.title}...`);
+
+    chapters.push({ title: article.title, data: article.content });
   }
 
-  console.log(`Website generated to ${absoluteOutFile}.`); 
+  const epubOptions = {
+    title,
+    author: "Unknown",
+    publisher: 'Unknown',
+    content: chapters,
+  };
+
+  console.log(`Generating epub...`);
+  new Epub(epubOptions, options.out);
 
 })();
