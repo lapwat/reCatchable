@@ -45,12 +45,12 @@ const options = yargs(hideBin(process.argv))
     alias: 'h',
     type: 'string',
     default: '/',
-    description: 'Path  of the website where the table of content is located, with leading slash',
+    description: 'Path to the page containing the table of content, with leading slash',
   })
   .option('out', {
     alias: 'o',
     type: 'string',
-    description: 'Name of the epub file',
+    description: 'Epub filename, defaults to Home page title',
   })
   .strict()
   .wrap(130)
