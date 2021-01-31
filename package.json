@@ -1,13 +1,16 @@
 {
-  "name": "doc2ebook",
-  "version": "0.1.0",
+  "name": "reCatchable",
+  "version": "0.2.0",
   "main": "index.js",
   "license": "MIT",
   "dependencies": {
     "@mozilla/readability": "^0.4.0",
     "epub-gen": "^0.1.0",
     "jsdom": "^16.4.0",
+    "readline-sync": "^1.4.10",
+    "remarkable-typescript": "^1.1.2",
     "sync-request": "^6.1.0",
+    "uuid": "^8.3.2",
     "website-scraper": "^4.2.3",
     "yargs": "^16.2.0"
   }
