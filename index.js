@@ -17,7 +17,7 @@ const remarkable = require('./utils/remarkable');
   let { title, chapterUrls } = scraper.getBookStructure(options.baseUrl, options.home, options.selector);
   title = options.title || title;
   
-  console.log(`Found ${chapterUrls.length} pages in the table of content`);
+  console.log(`Found ${chapterUrls.length} pages in the table of content.`);
   console.log(`Downloading ${title}...`);
 
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'cachable-')) + '/out';
@@ -27,22 +27,23 @@ const remarkable = require('./utils/remarkable');
   const bookFile = `${title}.epub`;
   const epubOptions = {
     title,
-    author: "Unknown",
+    author: options.author,
     publisher: 'Unknown',
     content: chapters.map(c => ({ title: c.title, data: c.content })),
   };
+
+  console.log(`Downloading images...`);
+
   await new Epub(epubOptions, bookFile).promise;
 
   console.log(`+ Book saved to ${bookFile}`);
 
   if (options.upload) {
-    console.log(`Uploading to reMarkable...`);
-
     try {
       await remarkable.uploadEpub(title, bookFile, options.tokenFile);
+      console.log('Book uploaded.');
     } catch (err) {
       console.log('Could not upload book, book name may already exists.', err);
     }
   }
-
 })();

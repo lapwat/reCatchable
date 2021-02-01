@@ -7,16 +7,14 @@ const { Remarkable, ItemResponse } = require('remarkable-typescript');
 const CATCHABLE_NAMESPACE = '5bb23635-bb75-4db7-b95a-c90972f89869';
 
 const getToken = async (tokenFile) => {
-  console.log(`Searching for ${tokenFile} file in current directory...`);
-
   if (fs.existsSync(tokenFile)) {
-    console.log('Token found!');
+    console.log(`Token found in ${tokenFile}!`);
 
     const deviceToken = fs.readFileSync(tokenFile).toString();
     return deviceToken;
   }
 
-  console.log('Token not found. Initiating connection process...');
+  console.log(`Token not found in ${tokenFile}. Initiating connection process...`);
 
   const code = readline.question('Enter one-time code displayed at https://my.remarkable.com/connect/desktop: ');
 

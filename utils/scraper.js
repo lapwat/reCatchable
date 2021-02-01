@@ -23,6 +23,15 @@ exports.getBookStructure = (baseUrl, home, selector) => {
   const title = dom.window.document.querySelector('title').textContent;
   const tableOfContent = dom.window.document.querySelectorAll(selector);
 
+  if (!selector) {
+    console.log('No selector specified, inserting home page only.');
+
+    return {
+      title,
+      chapterUrls: [{ url: baseUrl + home, filename: 'index' }],
+    };
+  }
+
   let chapterUrls = []
   for (const item of tableOfContent) {
     const url = item.href.startsWith('/') ? baseUrl + item.href : item.href;
