@@ -14,14 +14,14 @@ const scraper = require('./utils/scraper');
 const remarkable = require('./utils/remarkable');
 
 (async () => {
-  let { title, chapterUrls } = scraper.getBookStructure(options.baseUrl, options.home, options.selector);
+  let { title, chapterUrls } = scraper.getBookStructure(options.home.origin, options.home.pathname, options.selector);
   title = options.title || title;
   
   console.log(`Found ${chapterUrls.length} pages in the table of content.`);
   console.log(`Downloading ${title}...`);
 
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'cachable-')) + '/out';
-  await scraper.downloadUrls(chapterUrls, options.baseUrl, tmpDir);
+  await scraper.downloadUrls(chapterUrls, options.home.origin, tmpDir);
   const chapters = scraper.getPagesContent(chapterUrls, tmpDir);  
 
   const bookFile = `${title}.epub`;
@@ -32,9 +32,10 @@ const remarkable = require('./utils/remarkable');
     content: chapters.map(c => ({ title: c.title, data: c.content })),
   };
 
-  console.log(`Downloading images...`);
+  console.log(`Creating book...`);
 
   await new Epub(epubOptions, bookFile).promise;
+  fs.rmdirSync(tmpDir, { recursive: true });
 
   console.log(`+ Book saved to ${bookFile}`);
 

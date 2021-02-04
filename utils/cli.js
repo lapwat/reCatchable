@@ -5,39 +5,31 @@ const { hideBin } = require('yargs/helpers');
 module.exports = yargs(hideBin(process.argv))
   .usage('Usage: ./$0 [options]')
 
-  .option('base-url', {
-    alias: 'b',
-    type: 'string',
-    required: true,
-    description: 'Base url of the website',
-  })
-  .coerce('base-url', option => option.replace(/\/+$/, "")) // remove trailing slash
-
   .option('home', {
     alias: 'h',
     type: 'string',
-    default: '/',
-    description: 'Path to the page containing the table of content',
+    required: true,
+    description: 'Home page url',
   })
-  .coerce('home', option => option.startsWith('/') ? option : `/${option}`) // remove trailing slash
+  .coerce('home', option => new URL(option))
 
   .option('selector', {
     alias: 's',
     type: 'string',
-    description: 'HTML selector for links on the Home page to build the table of content',
+    description: 'Table of content HTML selector',
   })
 
   .option('title', {
     alias: 'n',
     type: 'string',
-    description: 'Title of the book, defaults to Home page title',
+    description: 'Title, defaults to Home page title',
   })
 
   .option('author', {
     alias: 'a',
     type: 'string',
     default: 'Unknown',
-    description: 'Author of the book',
+    description: 'Author',
   })
 
   .option('upload', {
@@ -56,10 +48,10 @@ module.exports = yargs(hideBin(process.argv))
   .coerce('token-file', option => path.resolve(option)) // get absolute path
 
   // examples
-  .example('./$0 -b https://www.halfbakedharvest.com -h /category/recipes -s .recipe-block')
-  .example('./$0 -b https://wiki.polkadot.network -h /docs/en/getting-started -s .navItem')
-  .example('./$0 -b https://dev.to -s \'a[id*="article-link-"]\' -u')
+  .example('./$0 -h https://www.halfbakedharvest.com/category/recipes -s .recipe-block')
+  .example('./$0 -h https://wiki.polkadot.network/docs/en/getting-started -s .navItem')
+  .example('./$0 -h https://dev.to -s \'a[id*="article-link-"]\' -u')
 
   .strict()
-  .wrap(120)
+  .wrap(100)
   .argv

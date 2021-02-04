@@ -1,4 +1,3 @@
-const os = require('os');
 const fs = require('fs');
 const path = require('path');
 
@@ -9,16 +8,16 @@ const scrape = require('website-scraper');
 
 class WebsiteScraperPlugin {
   apply(registerAction) {
-    registerAction('getReference', ({resource, parentResource, originalReference, utils}) => {
+    registerAction('getReference', ({ resource, parentResource, originalReference }) => {
       if (!resource)
-        return {reference: parentResource.url + originalReference}
-      return {reference: resource.url};
+        return { reference: parentResource.url + originalReference };
+      return { reference: resource.url };
     });
   }
 }
 
-exports.getBookStructure = (baseUrl, home, selector) => {
-  const body = request('GET', baseUrl + home).getBody();
+exports.getBookStructure = (origin, pathname, selector) => {
+  const body = request('GET', origin + pathname).getBody();
   const dom = new JSDOM(body);
   const title = dom.window.document.querySelector('title').textContent;
   const tableOfContent = dom.window.document.querySelectorAll(selector);
@@ -28,13 +27,13 @@ exports.getBookStructure = (baseUrl, home, selector) => {
 
     return {
       title,
-      chapterUrls: [{ url: baseUrl + home, filename: 'index' }],
+      chapterUrls: [{ url: origin + pathname, filename: 'index' }],
     };
   }
 
   let chapterUrls = []
   for (const item of tableOfContent) {
-    const url = item.href.startsWith('/') ? baseUrl + item.href : item.href;
+    const url = item.href.startsWith('/') ? origin + item.href : item.href;
     const filename = path.basename(item.href) || 'index';
 
     chapterUrls.push({ url, filename });
@@ -43,12 +42,12 @@ exports.getBookStructure = (baseUrl, home, selector) => {
   return { title, chapterUrls };
 }
 
-exports.downloadUrls = async (urls, baseUrl, directory) => {
+exports.downloadUrls = async (urls, origin, directory) => {
   await scrape({
     urls,
-    urlFilter: url => url.startsWith(baseUrl),
+    urlFilter: url => url.startsWith(origin),
     directory,
-    sources: [{ selector:'img', attr:'src' }],
+    sources: [{ selector: 'img', attr: 'src' }],
     plugins: [ new WebsiteScraperPlugin() ],
   });
 }

@@ -2,7 +2,7 @@ const fs = require('fs');
 const readline = require('readline-sync');
 
 const { v5: uuidv5 } = require('uuid');
-const { Remarkable, ItemResponse } = require('remarkable-typescript');
+const { Remarkable } = require('remarkable-typescript');
 
 const CATCHABLE_NAMESPACE = '5bb23635-bb75-4db7-b95a-c90972f89869';
 

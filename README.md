@@ -17,20 +17,19 @@ Turn a site into a book. Upload it to your reMarkable.
 Usage: ./index.js [options]
 
 Options:
-      --help        Show help                                                                                  [boolean]
-      --version     Show version number                                                                        [boolean]
-  -b, --base-url    Base url of the website                                                          [string] [required]
-  -h, --home        Path to the page containing the table of content                             [string] [default: "/"]
-  -s, --selector    HTML selector for links on the Home page to build the table of content                      [string]
-  -n, --title       Title of the book, defaults to Home page title                                              [string]
-  -a, --author      Author of the book                                                     [string] [default: "Unknown"]
-  -u, --upload      Upload book to reMarkable                                                 [boolean] [default: false]
-  -t, --token-file  File to read/write reMarkable token                           [string] [default: "remarkable.token"]
+      --help        Show help                                                              [boolean]
+      --version     Show version number                                                    [boolean]
+  -h, --home        Home page url                                                [string] [required]
+  -s, --selector    Table of content HTML selector                                          [string]
+  -n, --title       Title, defaults to Home page title                                      [string]
+  -a, --author      Author                                             [string] [default: "Unknown"]
+  -u, --upload      Upload book to reMarkable                             [boolean] [default: false]
+  -t, --token-file  File to read/write reMarkable token       [string] [default: "remarkable.token"]
 
 Examples:
-  ./index.js -b https://www.halfbakedharvest.com -h /category/recipes -s .recipe-block
-  ./index.js -b https://wiki.polkadot.network -h /docs/en/getting-started -s .navItem
-  ./index.js -b https://dev.to -s 'a[id*="article-link-"]' -u
+  ./index.js -h https://www.halfbakedharvest.com/category/recipes -s .recipe-block
+  ./index.js -h https://wiki.polkadot.network/docs/en/getting-started -s .navItem
+  ./index.js -h https://dev.to -s 'a[id*="article-link-"]' -u
 ```
 
 ## Dependencies
