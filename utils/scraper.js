@@ -16,8 +16,8 @@ class WebsiteScraperPlugin {
   }
 }
 
-exports.getBookStructure = (origin, pathname, selector) => {
-  const body = request('GET', origin + pathname).getBody();
+exports.getBookStructure = (origin, pathname, selector, html = null) => {
+  const body = html || request('GET', origin + pathname).getBody();
   const dom = new JSDOM(body);
   const title = dom.window.document.querySelector('title').textContent;
   const tableOfContent = dom.window.document.querySelectorAll(selector);

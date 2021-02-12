@@ -13,6 +13,12 @@ module.exports = yargs(hideBin(process.argv))
   })
   .coerce('home', option => new URL(option))
 
+  .option('home-html', {
+    type: 'string',
+    description: 'Html of the home page',
+  })
+  .coerce('home-html', option => require('fs').readFileSync(option))
+
   .option('selector', {
     alias: 's',
     type: 'string',

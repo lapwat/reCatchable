@@ -14,7 +14,7 @@ const scraper = require('./utils/scraper');
 const remarkable = require('./utils/remarkable');
 
 (async () => {
-  let { title, chapterUrls } = scraper.getBookStructure(options.home.origin, options.home.pathname, options.selector);
+  let { title, chapterUrls } = scraper.getBookStructure(options.home.origin, options.home.pathname, options.selector, options.homeHtml);
   title = options.title || title;
   
   if (options.limit !== -1)
