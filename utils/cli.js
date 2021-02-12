@@ -19,6 +19,13 @@ module.exports = yargs(hideBin(process.argv))
     description: 'Table of content HTML selector',
   })
 
+  .option('limit', {
+    alias: 'l',
+    type: 'number',
+    default: -1,
+    description: 'Limit the number of pages downloaded',
+  })
+
   .option('title', {
     alias: 'n',
     type: 'string',

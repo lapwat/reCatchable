@@ -45,5 +45,7 @@ exports.uploadEpub = async (title, filename, tokenFile) => {
   const stream = fs.createReadStream(filename);
   const client = await getClient(tokenFile);
 
+  console.log('Uploading...');
+
   await client.uploadEPUB(title, uuid, stream);
 }

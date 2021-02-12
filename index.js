@@ -17,6 +17,9 @@ const remarkable = require('./utils/remarkable');
   let { title, chapterUrls } = scraper.getBookStructure(options.home.origin, options.home.pathname, options.selector);
   title = options.title || title;
   
+  if (options.limit !== -1)
+    chapterUrls = chapterUrls.slice(0, options.limit);
+
   console.log(`Found ${chapterUrls.length} pages in the table of content.`);
   console.log(`Downloading ${title}...`);
 
@@ -35,7 +38,7 @@ const remarkable = require('./utils/remarkable');
   console.log(`Creating book...`);
 
   await new Epub(epubOptions, bookFile).promise;
-  fs.rmdirSync(tmpDir, { recursive: true });
+  fs.rmSync(tmpDir, { recursive: true, force: true });
 
   console.log(`+ Book saved to ${bookFile}`);
 
