@@ -20,7 +20,9 @@ Options:
       --help        Show help                                                              [boolean]
       --version     Show version number                                                    [boolean]
   -h, --home        Home page url                                                [string] [required]
+      --home-html   Html of the home page                                                   [string]
   -s, --selector    Table of content HTML selector                                          [string]
+  -l, --limit       Limit the number of pages downloaded                                    [number]
   -n, --title       Title, defaults to Home page title                                      [string]
   -a, --author      Author                                             [string] [default: "Unknown"]
   -u, --upload      Upload book to reMarkable                             [boolean] [default: false]
@@ -31,6 +33,8 @@ Examples:
   ./index.js -h https://wiki.polkadot.network/docs/en/getting-started -s .navItem
   ./index.js -h https://dev.to -s 'a[id*="article-link-"]' -u
 ```
+
+`--home-html` On some websites, the table of content is not present in the original HTML and is loaded later with JavaScript asynchronous queries. You can use this option to specify an HTML file for the Home page. 
 
 ## Dependencies
 

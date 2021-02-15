@@ -15,11 +15,10 @@ const remarkable = require('./utils/remarkable');
 
 (async () => {
   let { title, chapterUrls } = scraper.getBookStructure(options.home.origin, options.home.pathname, options.selector, options.homeHtml);
-  title = options.title || title;
-  
-  if (options.limit !== -1)
-    chapterUrls = chapterUrls.slice(0, options.limit);
 
+  title = options.title || title;
+  chapterUrls = options.limit ? chapterUrls.slice(0, options.limit) : chapterUrls;
+  
   console.log(`Found ${chapterUrls.length} pages in the table of content.`);
   console.log(`Downloading ${title}...`);
 

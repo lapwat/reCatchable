@@ -28,7 +28,6 @@ module.exports = yargs(hideBin(process.argv))
   .option('limit', {
     alias: 'l',
     type: 'number',
-    default: -1,
     description: 'Limit the number of pages downloaded',
   })
 
