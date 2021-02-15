@@ -34,7 +34,7 @@ exports.getBookStructure = (origin, pathname, selector, html = null) => {
   let chapterUrls = []
   for (const item of tableOfContent) {
     const url = item.href.startsWith('/') ? origin + item.href : item.href;
-    const filename = path.basename(item.href) || 'index';
+    const filename = path.basename(item.href).replace('?', '_') || 'index';
 
     chapterUrls.push({ url, filename });
   }
