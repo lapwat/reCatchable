@@ -56,7 +56,10 @@ exports.getPagesContent = (urls, downloadDirectory) => {
   const pages = [];
 
   for (const [ index, url ] of urls.entries()) {
-    const absoluteFilename = path.join(downloadDirectory, `${url.filename}.html`);
+    const filename = /\.html?$/.test(url.filename)
+      ? url.filename
+      : `${url.filename}.html`;
+    const absoluteFilename = path.join(downloadDirectory, filename);
     const body = fs.readFileSync(absoluteFilename);
     const dom = new JSDOM(body);
     const reader = new Readability(dom.window.document);
