@@ -21,6 +21,19 @@ class WebsiteScraperPlugin {
   }
 }
 
+getAbsoluteUrl = (href, origin) => {
+  // href is already absolute
+  if (href.startsWith('https://') || href.startsWith('http://')) return href;
+
+  // prepend origin to href
+  if (href.startsWith('/')) return origin + href;
+
+  // exclude emails
+  if (href.startsWith('mailto:')) return null;
+
+  return `${origin}/${href}`;
+}
+
 exports.getBookStructure = (origin, pathname, selector, html = null) => {
   const body = html || request('GET', origin + pathname).getBody();
   const dom = new JSDOM(body);
@@ -38,9 +51,9 @@ exports.getBookStructure = (origin, pathname, selector, html = null) => {
 
   let chapterUrls = []
   for (const item of tableOfContent) {
-    const url = item.href.startsWith('/')
-      ? origin + item.href
-      : item.href;
+    const url = getAbsoluteUrl(item.href, origin);
+    if (!url) continue;
+
     const filename = path.basename(item.href).replace('?', '_') || 'index';
 
     chapterUrls.push({ url, filename });
@@ -68,14 +81,14 @@ exports.downloadUrls = async (urls, directory) => {
     maxRecursiveDepth: 1,
     directory,
     sources: [{ selector: 'img', attr: 'src' }],
-    plugins: [ new WebsiteScraperPlugin() ],
+    plugins: [new WebsiteScraperPlugin()],
   });
 }
 
 exports.getPagesContent = (urls, downloadDirectory) => {
   const pages = [];
 
-  for (const [ index, url ] of urls.entries()) {
+  for (const [index, url] of urls.entries()) {
     const filename = url.filename.endsWith('.html')
       ? url.filename
       : `${url.filename}.html`;
@@ -86,7 +99,7 @@ exports.getPagesContent = (urls, downloadDirectory) => {
     const reader = new Readability(dom.window.document);
     const { title, content } = reader.parse();
 
-    console.log(`+ Page ${index+1}: ${title}`);
+    console.log(`+ Page ${index + 1}: ${title}`);
     pages.push({ title, content });
   }
 
