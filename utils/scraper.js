@@ -9,9 +9,15 @@ const scrape = require('website-scraper');
 class WebsiteScraperPlugin {
   apply(registerAction) {
     registerAction('getReference', ({ parentResource, originalReference }) => {
-      const absoluteReference = originalReference.startsWith('http')
-        ? originalReference
-        : parentResource.url + originalReference;
+      let absoluteReference = null;
+
+      if (originalReference.startsWith('https://') || originalReference.startsWith('http://')) {
+        // image url is already absolute
+        absoluteReference = originalReference;
+      } else {
+        const url = new URL(parentResource.url);
+        absoluteReference = getAbsoluteUrl(url.origin, url.pathname, originalReference);
+      }
 
       console.log('Setting absolute reference for image:', originalReference);
       console.log('->', absoluteReference);
@@ -21,49 +27,104 @@ class WebsiteScraperPlugin {
   }
 }
 
-getAbsoluteUrl = (href, origin) => {
+class Book {
+  constructor(title) {
+    this.title = title;
+    this.chapters = [];
+  }
+
+  getChapters(limit = null) {
+    if (limit) return this.chapters.slice(0, limit);
+
+    return this.chapters;
+  }
+
+  setTitle(title) {
+    this.title = title;
+  }
+
+  addChapter(chapter) {
+    this.chapters.push(chapter);
+  }
+}
+
+class Chapter {
+  constructor(origin, pathname, href) {
+    this.url = getAbsoluteUrl(origin, pathname, href);
+    this.filename = getFilename(href);
+  }
+
+  setContent(title, content) {
+    this.title = title;
+    this.content = content;
+  }
+}
+
+getAbsoluteUrl = (origin, pathname, href) => {
   // href is already absolute
   if (href.startsWith('https://') || href.startsWith('http://')) return href;
-
-  // prepend origin to href
-  if (href.startsWith('/')) return origin + href;
 
   // exclude emails
   if (href.startsWith('mailto:')) return null;
 
-  return `${origin}/${href}`;
+  // prepend origin to href
+  if (href.startsWith('/')) return origin + href;
+
+  const dirname = path.dirname(pathname);
+  return `${origin}${dirname}/${href}`;
 }
 
-exports.getBookStructure = (origin, pathname, selector, html = null) => {
+getFilename = (href) => {
+  let basename = path.basename(href);
+
+  // replace ambiguous characters
+  basename = basename.replace('?', '_')
+
+  // empty filename
+  if (!basename) return 'index.html';
+
+  // check filename ends with .html
+  if (!basename.endsWith('.html')) return `${basename}.html`;
+
+  return basename;
+}
+
+getTableOfContentSelector = (document) => {
+  // count a tag classes
+  const links = document.querySelectorAll('a');
+  const classes = R.countBy(l => l.className)(links);
+  delete classes[''];
+
+  // return max
+  const classMax = Object.keys(classes).reduce((a, b) => classes[a] > classes[b] ? a : b);
+
+  return '.' + classMax;
+}
+
+exports.getBook = (origin, pathname, selector, html = null) => {
   const body = html || request('GET', origin + pathname).getBody();
   const dom = new JSDOM(body);
   const title = dom.window.document.querySelector('title').textContent;
   const tableOfContent = dom.window.document.querySelectorAll(selector);
 
+  const book = new Book(title);
+
   if (!selector) {
     console.log('No selector specified, inserting home page only.');
 
-    return {
-      title,
-      chapterUrls: [{ url: origin + pathname, filename: 'index' }],
-    };
+    book.addChapter(new Chapter(origin, pathname));
+
+    return book;
   }
 
-  let chapterUrls = []
-  for (const item of tableOfContent) {
-    const url = getAbsoluteUrl(item.href, origin);
-    if (!url) continue;
+  for (const item of tableOfContent)
+    book.addChapter(new Chapter(origin, pathname, item.href));
 
-    const filename = path.basename(item.href).replace('?', '_') || 'index';
-
-    chapterUrls.push({ url, filename });
-  }
-
-  return { title, chapterUrls };
+  return book;
 }
 
 exports.downloadUrls = async (urls, directory) => {
-  const imageExtensions = ['jpg', 'jpeg', 'png'];
+  const imageExtensions = ['jpg', 'jpeg', 'png', 'gif'];
 
   await scrape({
     urls,
@@ -85,23 +146,12 @@ exports.downloadUrls = async (urls, directory) => {
   });
 }
 
-exports.getPagesContent = (urls, downloadDirectory) => {
-  const pages = [];
+exports.getContent = (chapter, contentDirectory) => {
+  const filePath = path.join(contentDirectory, chapter.filename);
 
-  for (const [index, url] of urls.entries()) {
-    const filename = url.filename.endsWith('.html')
-      ? url.filename
-      : `${url.filename}.html`;
-    const absoluteFilename = path.join(downloadDirectory, filename);
+  const body = fs.readFileSync(filePath);
+  const dom = new JSDOM(body);
+  const { title, content } = new Readability(dom.window.document).parse();
 
-    const body = fs.readFileSync(absoluteFilename);
-    const dom = new JSDOM(body);
-    const reader = new Readability(dom.window.document);
-    const { title, content } = reader.parse();
-
-    console.log(`+ Page ${index + 1}: ${title}`);
-    pages.push({ title, content });
-  }
-
-  return pages;
+  return { title, content };
 }

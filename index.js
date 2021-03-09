@@ -18,32 +18,37 @@ const remarkable = require('./utils/remarkable');
 })();
 
 async function run(options) {
-  let { title, chapterUrls } = scraper.getBookStructure(options.home.origin, options.home.pathname, options.selector, options.homeHtml);
+  const book = scraper.getBook(options.home.origin, options.home.pathname, options.selector, options.homeHtml);
+  if (options.title) book.setTitle(options.title);
 
-  title = options.title || title;
-  chapterUrls = options.limit ? chapterUrls.slice(0, options.limit) : chapterUrls;
+  const chapters = book.getChapters(options.limit);
 
-  console.log(`Found ${chapterUrls.length} pages in the table of content.`);
-  console.log(`Downloading ${title}...`);
+  console.log(`Found ${chapters.length} pages in the table of content.`);
+  console.log(`Downloading ${book.title}...`);
 
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'cachable-')) + '/out';
-  await scraper.downloadUrls(chapterUrls, tmpDir);
+  await scraper.downloadUrls(chapters, tmpDir);
 
   if (fs.existsSync(`${tmpDir}/images`))
     console.log('Warning: Found /images in content folder, images inside this directory may be redownloaded by epub-gen.');
 
   console.log(`Extracting clean content from HTML sources...`);
-  const chapters = scraper.getPagesContent(chapterUrls, tmpDir);
+  for (const [index, chapter] of chapters.entries()) {
+    const { title, content } = scraper.getContent(chapter, tmpDir);
+
+    console.log(`+ Chapter ${index + 1}: ${title}`);
+    chapter.setContent(title, content);
+  }
   fs.rmSync(tmpDir, { recursive: true, force: true });
 
   console.log(`Creating book...`);
 
-  const bookFile = `${title}.epub`;
+  const bookFile = `${book.title}.epub`;
   const epubOptions = {
-    title,
+    title: book.title,
     author: options.author,
     publisher: 'Unknown',
-    content: chapters.map(c => ({ title: c.title, data: c.content })),
+    content: chapters.map(chapter => ({ title: chapter.title, data: chapter.content })),
   };
 
   await new Epub(epubOptions, bookFile).promise;
