@@ -16,13 +16,13 @@ const getToken = async (tokenFile) => {
 
   console.log(`Token not found in ${tokenFile}. Initiating connection process...`);
 
-  const code = readline.question('Enter one-time code displayed at https://my.remarkable.com/connect/desktop: ');
+  const code = readline.question('Enter one-time code displayed at https://my.remarkable.com/device/connect/desktop: ');
 
   console.log('Attempting connection...');
 
-  const client = new Remarkable(); 
+  const client = new Remarkable();
   const deviceToken = await client.register({ code });
-  
+
   console.log('Connection succeeded!');
 
   fs.writeFileSync(tokenFile, deviceToken);

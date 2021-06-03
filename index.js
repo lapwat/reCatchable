@@ -57,7 +57,7 @@ async function run(options) {
 
   if (options.upload) {
     try {
-      await remarkable.uploadEpub(title, bookFile, options.tokenFile);
+      await remarkable.uploadEpub(book.title, bookFile, options.tokenFile);
       console.log('Book uploaded.');
     } catch (err) {
       console.log('Could not upload book, book name may already exists.', err);
