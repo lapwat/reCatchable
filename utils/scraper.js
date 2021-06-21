@@ -1,68 +1,42 @@
-const fs = require('fs');
-const path = require('path');
+import path from 'path'
 
-const request = require('sync-request');
-const JSDOM = require('jsdom').JSDOM;
-const { Readability } = require('@mozilla/readability');
-const scrape = require('website-scraper');
+import fetch from 'node-fetch';
+import { JSDOM } from 'jsdom';
+import { Readability } from '@mozilla/readability';
+import * as R from 'ramda';
 
-class WebsiteScraperPlugin {
-  apply(registerAction) {
-    registerAction('getReference', ({ parentResource, originalReference }) => {
-      let absoluteReference = null;
+export async function getChapter(url) {
+  const response = await fetch(url.href);
+  const body = await response.text();
+  const document = new JSDOM(body).window.document;
 
-      if (originalReference.startsWith('https://') || originalReference.startsWith('http://')) {
-        // image url is already absolute
-        absoluteReference = originalReference;
-      } else {
-        const url = new URL(parentResource.url);
-        absoluteReference = getAbsoluteUrl(url.origin, url.pathname, originalReference);
-      }
-
-      console.log('Setting absolute reference for image:', originalReference);
-      console.log('->', absoluteReference);
-
-      return { reference: absoluteReference };
-    });
+  // replace images src with absolute references inplace
+  const images = document.querySelectorAll('img');
+  for (const image of images) {
+    const src = image.getAttribute('src');
+    try {
+      const absoluteSrc = getAbsoluteUrl(url.origin, url.pathname, src);
+      image.setAttribute('src', absoluteSrc);
+    } catch {
+      image.setAttribute('src', '');
+    }
   }
+
+  const reader = new Readability(document);
+  const { title, content } = reader.parse();
+  const words = new JSDOM(content).window.document.body.textContent.split(/\s+/).length;
+
+  return { name: title, content, words };
 }
 
-class Book {
-  constructor(title) {
-    this.title = title;
-    this.chapters = [];
-  }
-
-  getChapters(limit = null) {
-    if (limit) return this.chapters.slice(0, limit);
-
-    return this.chapters;
-  }
-
-  setTitle(title) {
-    this.title = title;
-  }
-
-  addChapter(chapter) {
-    this.chapters.push(chapter);
-  }
-}
-
-class Chapter {
-  constructor(origin, pathname, href) {
-    this.url = getAbsoluteUrl(origin, pathname, href);
-    this.filename = getFilename(href);
-  }
-
-  setContent(title, content) {
-    this.title = title;
-    this.content = content;
-  }
-}
-
-getAbsoluteUrl = (origin, pathname, href) => {
+function getAbsoluteUrl(origin, pathname, href) {
   // href is already absolute
   if (href.startsWith('https://') || href.startsWith('http://')) return href;
+
+  if (href.startsWith('//')) {
+    const protocol = href.startsWith('https://') ? 'https:' : 'http:';
+    return protocol + href;
+  }
 
   // exclude emails
   if (href.startsWith('mailto:')) return null;
@@ -70,88 +44,63 @@ getAbsoluteUrl = (origin, pathname, href) => {
   // prepend origin to href
   if (href.startsWith('/')) return origin + href;
 
-  const dirname = path.dirname(pathname);
-  return `${origin}${dirname}/${href}`;
+  if (pathname.endsWith('index.html')) // pandas doc
+    return `${origin}${path.dirname(pathname)}/${href}`;
+
+  if (href.startsWith('..')) // for l'histoire de france
+    return `${origin}${href.substring(2)}`;
+
+  return `${origin}${pathname}${href}`; // nginx, based cooking
 }
 
-getFilename = (href) => {
-  let basename = path.basename(href);
+export async function getTableOfContent(url, selector = null) {
+  const response = await fetch(url);
+  const contentType = response.headers.get('content-type');
+  const body = await response.text();
 
-  // replace ambiguous characters
-  basename = basename.replace('?', '_')
+  if (selector) return getTableOfContentFromHTML(body, new URL(url), selector);
 
-  // empty filename
-  if (!basename) return 'index.html';
+  if (contentType.includes("text/html")) {
+    // const urlRSS = await guessRSSFeed(new URL(url));
+    // if (urlRSS) return await getBookSkeleton(urlRSS);
 
-  // check filename ends with .html
-  if (!basename.endsWith('.html')) return `${basename}.html`;
+    return getTableOfContentFromHTML(body, new URL(url), selector);
+  }
 
-  return basename;
+  // if (contentType.includes("xml"))
+  //   return await getBookSkeleton(url);
+
+  throw new Error("Unknown content type.");
 }
 
-getTableOfContentSelector = (document) => {
-  // count a tag classes
+export async function getBookSkeleton(url, selector = null) {
+  const response = await fetch(url);
+  const body = await response.text();
+  const document = new JSDOM(body).window.document;
+
+  const name = document.querySelector('title').textContent;
+  const aTags = document.querySelectorAll(selector || guessSelector(document));
+
+  const chapters = [];
+  for (const aTag of aTags) {
+    const absoluteUrl = getAbsoluteUrl(url.origin, url.pathname, aTag.href);
+    chapters.push({
+      name: aTag.textContent,
+      url: absoluteUrl,
+    });
+  }
+
+  return {
+    name,
+    chapters,
+  };
+}
+
+function guessSelector(document) {
   const links = document.querySelectorAll('a');
   const classes = R.countBy(l => l.className)(links);
   delete classes[''];
-
-  // return max
   const classMax = Object.keys(classes).reduce((a, b) => classes[a] > classes[b] ? a : b);
 
   return '.' + classMax;
-}
-
-exports.getBook = (origin, pathname, selector, html = null) => {
-  const body = html || request('GET', origin + pathname).getBody();
-  const dom = new JSDOM(body);
-  const title = dom.window.document.querySelector('title').textContent;
-  const tableOfContent = dom.window.document.querySelectorAll(selector);
-
-  const book = new Book(title);
-
-  if (!selector) {
-    console.log('No selector specified, inserting home page only.');
-
-    book.addChapter(new Chapter(origin, pathname));
-
-    return book;
-  }
-
-  for (const item of tableOfContent)
-    book.addChapter(new Chapter(origin, pathname, item.href));
-
-  return book;
-}
-
-exports.downloadUrls = async (urls, directory) => {
-  const imageExtensions = ['jpg', 'jpeg', 'png', 'gif'];
-
-  await scrape({
-    urls,
-    urlFilter: url => {
-      url = new URL(url);
-      const extension = url.pathname.split('.').pop().toLowerCase();
-
-      if (imageExtensions.includes(extension)) {
-        console.log('Skipping image:', url.pathname);
-        return false;
-      }
-
-      return true;
-    },
-    maxRecursiveDepth: 1,
-    directory,
-    sources: [{ selector: 'img', attr: 'src' }],
-    plugins: [new WebsiteScraperPlugin()],
-  });
-}
-
-exports.getContent = (chapter, contentDirectory) => {
-  const filePath = path.join(contentDirectory, chapter.filename);
-
-  const body = fs.readFileSync(filePath);
-  const dom = new JSDOM(body);
-  const { title, content } = new Readability(dom.window.document).parse();
-
-  return { title, content };
 }

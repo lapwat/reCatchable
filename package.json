@@ -1,17 +1,19 @@
 {
   "name": "recatchable",
-  "version": "0.2.3",
+  "version": "0.3",
+  "type": "module",
   "main": "index.js",
   "license": "MIT",
   "dependencies": {
     "@mozilla/readability": "^0.4.1",
+    "cli-progress": "^3.9.0",
     "epub-gen": "^0.1.0",
     "jsdom": "^16.6.0",
+    "node-fetch": "^2.6.1",
+    "ramda": "^0.27.1",
     "readline-sync": "^1.4.10",
     "remarkable-typescript": "lapwat/reMarkable-typescript",
-    "sync-request": "^6.1.0",
     "uuid": "^8.3.2",
-    "website-scraper": "^4.2.3",
     "yargs": "^17.0.1"
   }
 }

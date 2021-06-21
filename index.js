@@ -1,68 +1,81 @@
 #!/usr/bin/env node
 
-// core
-const os = require('os');
-const fs = require('fs');
-const path = require('path');
-
 // librairies
-const Epub = require('epub-gen');
+import cliProgress from 'cli-progress';
+import Epub from 'epub-gen';
 
 // utils
-const options = require('./utils/cli');
-const scraper = require('./utils/scraper');
-const remarkable = require('./utils/remarkable');
+import options from './utils/cli.js';
+import uploadEpub from './utils/remarkable.js';
+import { getBookSkeleton, getChapter } from './utils/scraper.js';
+
+const progress = new cliProgress.SingleBar({
+  format: 'Downloading [{bar}] {percentage}% | ETA: {eta}s | {value}/{total}',
+  hideCursor: true,
+}, cliProgress.Presets.shades_classic);
+
+function sleep(seconds) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, 1000 * seconds);
+  });
+};
 
 (async () => {
   await run(options);
 })();
 
 async function run(options) {
-  const book = scraper.getBook(options.home.origin, options.home.pathname, options.selector, options.homeHtml);
-  if (options.title) book.setTitle(options.title);
+  const skeleton = await getBookSkeleton(options.home, options.selector);
+  console.log(`----- ${skeleton.name} ----- ${skeleton.chapters.length} chapters`);
 
-  const chapters = book.getChapters(options.limit);
+  const limit = options.limit || skeleton.chapters.length;
+  const urls = skeleton.chapters
+    .slice(0, limit)
+    .map(chapter => new URL(chapter.url));
 
-  console.log(`Found ${chapters.length} pages in the table of content.`);
-  console.log(`Downloading ${book.title}...`);
+  progress.start(urls.length, 0);
 
-  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'cachable-')) + '/out';
-  await scraper.downloadUrls(chapters, tmpDir);
-
-  if (fs.existsSync(`${tmpDir}/images`))
-    console.log('Warning: Found /images in content folder, images inside this directory may be redownloaded by epub-gen.');
-
-  console.log(`Extracting clean content from HTML sources...`);
-  for (const [index, chapter] of chapters.entries()) {
-    const { title, content } = scraper.getContent(chapter, tmpDir);
-
-    console.log(`+ Chapter ${index + 1}: ${title}`);
-    chapter.setContent(title, content);
+  const chapters = [];
+  if (options.sync) {
+    for (const url of urls) {
+      chapters.push(await getChapter(url));
+      progress.increment();
+      await sleep(options.delay);
+    }
+  } else {
+    await Promise.all(urls.map(async url => {
+      chapters.push(await getChapter(url));
+      progress.increment();
+    }));
   }
-  fs.rmSync(tmpDir, { recursive: true, force: true });
 
-  console.log(`Creating book...`);
+  progress.stop();
 
-  const bookFile = `${book.title}.epub`;
-  const epubOptions = {
-    title: book.title,
-    author: options.author,
-    publisher: 'Unknown',
-    content: chapters.map(chapter => ({ title: chapter.title, data: chapter.content })),
+  const book = {
+    name: options.name || skeleton.name,
+    chapters,
   };
 
-  await new Epub(epubOptions, bookFile).promise;
+  console.log(`+ Creating book...`);
 
-  console.log(`+ Book saved to ${bookFile}`);
+  const filename = `${book.name}.epub`;
+  const epubOptions = {
+    title: book.name,
+    author: options.author,
+    publisher: 'Unknown',
+    content: chapters.map(chapter => ({ title: chapter.name, data: chapter.content })),
+  };
+
+  await new Epub(epubOptions, filename).promise;
+
+  console.log(`+ Book saved to ${filename}`);
 
   if (options.upload) {
     try {
-      await remarkable.uploadEpub(book.title, bookFile, options.tokenFile);
+      await uploadEpub(book.name, filename, options.tokenFile);
       console.log('Book uploaded.');
     } catch (err) {
       console.log('Could not upload book, book name may already exists.', err);
     }
   }
 }
-
-exports.default = run;
