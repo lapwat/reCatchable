@@ -8,12 +8,12 @@
     "@mozilla/readability": "^0.4.1",
     "cli-progress": "^3.9.0",
     "epub-gen": "^0.1.0",
-    "jsdom": "^16.6.0",
+    "jsdom": "^17.0.0",
     "node-fetch": "^2.6.1",
     "ramda": "^0.27.1",
     "readline-sync": "^1.4.10",
-    "remarkable-typescript": "lapwat/reMarkable-typescript",
+    "remarkable-typescript": "^1.1.3",
     "uuid": "^8.3.2",
-    "yargs": "^17.0.1"
+    "yargs": "^17.1.1"
   }
 }

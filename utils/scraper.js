@@ -1,5 +1,3 @@
-import path from 'path'
-
 import fetch from 'node-fetch';
 import { JSDOM } from 'jsdom';
 import { Readability } from '@mozilla/readability';
@@ -15,7 +13,7 @@ export async function getChapter(url) {
   for (const image of images) {
     const src = image.getAttribute('src');
     try {
-      const absoluteSrc = getAbsoluteUrl(url.origin, url.pathname, src);
+      const absoluteSrc = getAbsoluteUrl(url, src);
       image.setAttribute('src', absoluteSrc);
     } catch {
       image.setAttribute('src', '');
@@ -29,28 +27,33 @@ export async function getChapter(url) {
   return { name: title, content, words };
 }
 
-function getAbsoluteUrl(origin, pathname, href) {
-  // href is already absolute
-  if (href.startsWith('https://') || href.startsWith('http://')) return href;
+// https://www.generacodice.com/en/articolo/2933389/javascript:-regex-to-change-all-relative-urls-to-absolute
+function getAbsoluteUrl(location, url) {
+  /* Only accept commonly trusted protocols:
+   * Only data-image URLs are accepted, Exotic flavours (escaped slash,
+   * html-entitied characters) are not supported to keep the function fast */
+  if (/^(https?|file|ftps?|mailto|javascript|data:image\/[^;]{2,9};):/i.test(url))
+    return url; //Url is already absolute
 
-  if (href.startsWith('//')) {
-    const protocol = href.startsWith('https://') ? 'https:' : 'http:';
-    return protocol + href;
-  }
+  var base_url = location.href.match(/^(.+)\/?(?:#.+)?$/)[0] + "/";
+  if (url.substring(0, 2) == "//")
+    return location.protocol + url;
+  else if (url.charAt(0) == "/")
+    return location.protocol + "//" + location.host + url;
+  else if (url.substring(0, 2) == "./")
+    url = "." + url;
+  else if (/^\s*$/.test(url))
+    return ""; //Empty = Return nothing
+  else url = "../" + url;
 
-  // exclude emails
-  if (href.startsWith('mailto:')) return null;
+  url = base_url + url;
+  var i = 0
+  while (/\/\.\.\//.test(url = url.replace(/[^\/]+\/+\.\.\//g, "")));
 
-  // prepend origin to href
-  if (href.startsWith('/')) return origin + href;
-
-  if (pathname.endsWith('index.html')) // pandas doc
-    return `${origin}${path.dirname(pathname)}/${href}`;
-
-  if (href.startsWith('..')) // for l'histoire de france
-    return `${origin}${href.substring(2)}`;
-
-  return `${origin}${pathname}${href}`; // nginx, based cooking
+  /* Escape certain characters to prevent XSS */
+  url = url.replace(/\.$/, "").replace(/\/\./g, "").replace(/"/g, "%22")
+    .replace(/'/g, "%27").replace(/</g, "%3C").replace(/>/g, "%3E");
+  return url;
 }
 
 export async function getTableOfContent(url, selector = null) {
@@ -83,7 +86,7 @@ export async function getBookSkeleton(url, selector = null) {
 
   const chapters = [];
   for (const aTag of aTags) {
-    const absoluteUrl = getAbsoluteUrl(url.origin, url.pathname, aTag.href);
+    const absoluteUrl = getAbsoluteUrl(url, aTag.href);
     chapters.push({
       name: aTag.textContent,
       url: absoluteUrl,

@@ -25,9 +25,10 @@ function sleep(seconds) {
 })();
 
 async function run(options) {
-  const skeleton = await getBookSkeleton(options.home, options.selector);
+  const skeleton = await getBookSkeleton(options.url, options.selector);
   console.log(`----- ${skeleton.name} ----- ${skeleton.chapters.length} chapters`);
 
+  // retrieve urls from skeleton chapter list
   const limit = options.limit || skeleton.chapters.length;
   const urls = skeleton.chapters
     .slice(0, limit)
@@ -36,27 +37,35 @@ async function run(options) {
   progress.start(urls.length, 0);
 
   const chapters = [];
-  if (options.sync) {
-    for (const url of urls) {
-      chapters.push(await getChapter(url));
-      progress.increment();
-      await sleep(options.delay);
-    }
-  } else {
+  if (options.delay === null) {
+
+    // asynchronous download
     await Promise.all(urls.map(async url => {
       chapters.push(await getChapter(url));
       progress.increment();
     }));
+
+  } else {
+
+    // synchronous download
+    for (const url of urls) {
+      chapters.push(await getChapter(url));
+      progress.increment();
+
+      // wait before downloading next chapter
+      await sleep(options.delay);
+    }
+
   }
 
   progress.stop();
+
+  console.log(`+ Creating book...`);
 
   const book = {
     name: options.name || skeleton.name,
     chapters,
   };
-
-  console.log(`+ Creating book...`);
 
   const filename = `${book.name}.epub`;
   const epubOptions = {
@@ -70,12 +79,13 @@ async function run(options) {
 
   console.log(`+ Book saved to ${filename}`);
 
+  // upload book
   if (options.upload) {
     try {
       await uploadEpub(book.name, filename, options.tokenFile);
       console.log('Book uploaded.');
     } catch (err) {
-      console.log('Could not upload book, book name may already exists.', err);
+      console.log('Could not upload book, book name may already exists. Try to specify a custom name with --name option.', err);
     }
   }
 }
