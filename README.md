@@ -1,3 +1,10 @@
+This utility has been rewritten in Golang.
+
+- Because it is fast
+- Because it can be shipped as a single binary
+
+Check out the Go version: https://github.com/lapwat/papeer
+
 # reCatchable
 
 Turn a site into a book. Upload it to your reMarkable.
